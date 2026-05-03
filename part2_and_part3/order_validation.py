@@ -44,7 +44,7 @@ class DbMock:
                     'type': 'buy',
                     'quantity': 1.5,
                     'price': 20000,
-                    'timestamp': 1777788000.0,
+                    'timestamp': ( datetime.datetime.now() + datetime.timedelta( seconds= 5 * 60 ) ).timestamp(),
                 },
                 {
                     'id': 2,
@@ -52,7 +52,7 @@ class DbMock:
                     'type': 'buy',
                     'quantity': 2.5,
                     'price': 10000,
-                    'timestamp': 1777791600.0,
+                    'timestamp': ( datetime.datetime.now() + datetime.timedelta( seconds= 10 * 60 ) ).timestamp(),
                 },
                 {
                     'id': 3,
@@ -60,7 +60,7 @@ class DbMock:
                     'type': 'sell',
                     'quantity': 0.5,
                     'price': 10000,
-                    'timestamp': 1777795200.0,
+                    'timestamp': ( datetime.datetime.now() + datetime.timedelta( seconds= 15 * 60 ) ).timestamp(),
                 },
             ],
         }
