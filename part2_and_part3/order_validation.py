@@ -16,7 +16,7 @@ ORDER_TYPE_SELL = 'sell'
 QUANTITY_INCREMENT_STEP = Decimal( '0.5' )
 TOLERANCE_ORDER_AMOUNT = Decimal( '0.02' )
 TRADING_LIMIT_QUANTITY = Decimal( '5' )
-MARGIN = Decimal( '0.02' )
+MARGIN = Decimal( '0.005' )
 
 ##############################
 #
@@ -24,8 +24,6 @@ MARGIN = Decimal( '0.02' )
 #
 class DbMock:
     def __init__( self ):
-        '''
-        '''
         self.table_to_data_info_dict = {
             'customers': [
                 {
@@ -161,7 +159,7 @@ class OrderValidator:
             return 'Cannot proceed with market price at 0'
 
         # quotedPrice must not over 2% of market price
-        quoted_price_diff = ( abs( quoted_price - market_price ) / market_price ).quantize( Decimal( '0.0001' ) )
+        quoted_price_diff = ( abs( quoted_price - market_price ) / market_price )
         if quoted_price_diff > TOLERANCE_ORDER_AMOUNT:
             return 'Price freshness error: order does not in valid range'
 
@@ -204,7 +202,7 @@ class OrderValidator:
         if quantity > current_quantity:
             return f'Insufficient holding quantity for making sell order'
 
-    def _validate_trading_limit( self, customer_id: int, quantity: Decimal ):
+    def _validate_trading_limit( self, customer_id: int, quantity: Decimal ) -> str | None:
         ''' validate the trading limit that must over limited
             even buy or sell
 
@@ -293,31 +291,32 @@ class OrderValidator:
         quantity_dec = Decimal( str( quantity ) )
         quoted_price_dec = Decimal( str( quoted_price ) )
 
+        # validate quantity
+        error = self._validate_quantity( quantity_dec )
+        if error is not None:
+            return self._construct_failed_response( error )
+
         # validate trading limit of customer
         error = self._validate_trading_limit( customer_id, quantity_dec )
         if error is not None:
             return self._construct_failed_response( error )
 
-        # store error of business logic
-        errors = list()
-
         # get market price from db
         market_price_dec = self.db.get_market_price()
 
-        # validate quantity
-        error = self._validate_quantity( quantity_dec )
-        if error is not None:
-            errors.append( error )
+        # init spread amount to 0
+        spread_amount_dec = Decimal( '0' )
 
         # validate buy order type
         if order_type == ORDER_TYPE_BUY:
 
             # compute market price with spread including margin
-            market_price_with_spread_dec = market_price_dec * ( 1 + self.margin )
+            spread_amount_dec = market_price_dec * self.margin
+            market_price_with_spread_dec = market_price_dec + spread_amount_dec
 
             error = self._validate_buy_order_type( customer_id, quantity_dec, quoted_price_dec )
             if error is not None:
-                errors.append( error )
+                return self._construct_failed_response( error )
 
         # validate sell order type
         elif order_type == ORDER_TYPE_SELL:
@@ -327,18 +326,18 @@ class OrderValidator:
 
             error = self._validate_sell_order_type( customer_id, quantity_dec )
             if error is not None:
-                errors.append( error )
+                return self._construct_failed_response( error )
+
+        # to prevent bug when forget to implement new order type if there is
+        else:
+            return self._construct_failed_response( f'Unsupported order type {order_type}' )
 
         # validate quoted price
         error = self._validate_quoted_price( quoted_price_dec, market_price_with_spread_dec )
         if error is not None:
-            errors.append( error )
+            return self._construct_failed_response( error )
 
-        # construct error response if there are errors from business logic validation
-        if len( errors ) > 0:
-            return self._construct_failed_response( *errors )
-
-        return { 'status': 'passed', }
+        return { 'status': 'passed', 'spread_amount': spread_amount_dec.quantize( Decimal( '0.01' ) ), }
 
 ##############################
 #
@@ -353,11 +352,7 @@ if __name__ == '__main__':
     parser.add_argument( 'quoted_price', type=float, help='price when make order' )
     args = parser.parse_args()
 
-    # customer_id = 1
-    # order_type = ORDER_TYPE_BUY
-    # quantity = 3
-    # quoted_price = 70500.5
-
+    # get argument
     customer_id = args.customer_id
     order_type = args.order_type
     quantity = args.quantity

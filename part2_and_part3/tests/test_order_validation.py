@@ -11,6 +11,7 @@ from unittest.mock import Mock
 # Local Import
 #
 from order_validation import (
+    TOLERANCE_ORDER_AMOUNT,
     OrderValidator,
     ORDER_TYPE_BUY,
     ORDER_TYPE_SELL,
@@ -50,10 +51,11 @@ class TestOrderValidator( unittest.TestCase ):
             'name': 'Alice',
         }
 
-    def test_validate_buy_order_success(self):
+    def test_validate_buy_order_success( self ):
         ''' test validate function in case success proceed buy order
 
             expected result status should be passed
+                buy order spread amount must be computed with market price * margin
         '''
         # mock value of each function
         # market price
@@ -72,8 +74,6 @@ class TestOrderValidator( unittest.TestCase ):
         customer_id = 1
         order_type = ORDER_TYPE_BUY
         quantity = 1
-
-        # market price 71000 + margin 2% = 72420
         quoted_price = 72420
 
         # call test function
@@ -86,11 +86,14 @@ class TestOrderValidator( unittest.TestCase ):
 
         # check status should be passed
         self.assertEqual( result[ 'status' ], 'passed' )
+        spread_amount = Decimal( '71000.00' ) * MARGIN
+        self.assertEqual( result[ 'spread_amount' ], spread_amount.quantize( Decimal( '0.01' ) ) )
 
-    def test_validate_sell_order_success(self):
+    def test_validate_sell_order_success( self ):
         ''' test validate function in case success proceed sell order
 
             expected result status should be passed
+                sell order spread amount must be 0.00
         '''
         # mock value of each function
         # market price
@@ -109,8 +112,6 @@ class TestOrderValidator( unittest.TestCase ):
         customer_id = 1
         order_type = ORDER_TYPE_SELL
         quantity = 1
-
-        # market price 71000 + margin 2% = 72420
         quoted_price = 71000
 
         # call test function
@@ -123,8 +124,10 @@ class TestOrderValidator( unittest.TestCase ):
 
         # check status should be passed
         self.assertEqual( result[ 'status' ], 'passed' )
+        spread_amount = Decimal( '0' )
+        self.assertEqual( result[ 'spread_amount' ], spread_amount.quantize( Decimal( '0.01' ) ) )
 
-    def test_validate_invalid_order_type(self):
+    def test_validate_invalid_order_type( self ):
         ''' test validate function in case failed proceed invalid order type
 
             expected result status should be failed
@@ -146,8 +149,6 @@ class TestOrderValidator( unittest.TestCase ):
         customer_id = 1
         order_type = 'invalid'
         quantity = 1
-
-        # market price 71000 + margin 2% = 72420
         quoted_price = 71000
 
         # call test function
@@ -162,7 +163,7 @@ class TestOrderValidator( unittest.TestCase ):
         self.assertEqual( result[ 'status' ], 'failed' )
         self.assertIn( 'Unsupported order type', result[ 'reason' ] )
 
-    def test_validate_quantity_must_be_number(self):
+    def test_validate_quantity_must_be_number( self ):
         ''' test validate function in case failed proceed
             with type assertions quantity
 
@@ -181,17 +182,21 @@ class TestOrderValidator( unittest.TestCase ):
         # list of orders
         self.mock_test_db.get_orders.return_value = []
 
+        customer_id = 1
+        order_type = ORDER_TYPE_BUY
+        quantity = 'abc'
+        quoted_price = 71000
         result = self.validator.order_validation(
-            customer_id=1,
-            order_type=ORDER_TYPE_BUY,
-            quantity='abc',
-            quoted_price=71000,
+            customer_id,
+            order_type,
+            quantity,
+            quoted_price,
         )
 
-        self.assertEqual(result['status'], 'failed')
-        self.assertIn('quantity must be a number', result['reason'])
+        self.assertEqual( result[ 'status' ], 'failed' )
+        self.assertIn( 'quantity must be a number', result[ 'reason' ] )
 
-    def test_validate_price_must_be_number(self):
+    def test_validate_price_must_be_number( self ):
         ''' test validate function in case failed proceed
             with type assertions price
 
@@ -210,17 +215,21 @@ class TestOrderValidator( unittest.TestCase ):
         # list of orders
         self.mock_test_db.get_orders.return_value = []
 
+        customer_id = 1
+        order_type = ORDER_TYPE_BUY
+        quantity = 1
+        quoted_price = 'abc'
         result = self.validator.order_validation(
-            customer_id=1,
-            order_type=ORDER_TYPE_BUY,
-            quantity=1,
-            quoted_price='abc',
+            customer_id,
+            order_type,
+            quantity,
+            quoted_price,
         )
 
-        self.assertEqual(result['status'], 'failed')
-        self.assertIn('price must be a number', result['reason'])
+        self.assertEqual( result[ 'status' ], 'failed' )
+        self.assertIn( 'price must be a number', result[ 'reason' ] )
 
-    def test_validate_quantity_must_be_positive(self):
+    def test_validate_quantity_must_be_positive( self ):
         ''' test validate function in case failed proceed
             with quantity must be positive value
 
@@ -239,17 +248,21 @@ class TestOrderValidator( unittest.TestCase ):
         # list of orders
         self.mock_test_db.get_orders.return_value = []
 
+        customer_id = 1
+        order_type = ORDER_TYPE_BUY
+        quantity = -1
+        quoted_price = 72420
         result = self.validator.order_validation(
-            customer_id=1,
-            order_type=ORDER_TYPE_BUY,
-            quantity=-1,
-            quoted_price=72420,
+            customer_id,
+            order_type,
+            quantity,
+            quoted_price,
         )
 
-        self.assertEqual(result['status'], 'failed')
-        self.assertIn('quantity must be a positive', result['reason'])
+        self.assertEqual( result[ 'status' ], 'failed' )
+        self.assertIn( 'quantity must be a positive', result[ 'reason' ] )
 
-    def test_validate_price_must_be_positive(self):
+    def test_validate_price_must_be_positive( self ):
         ''' test validate function in case failed proceed
             with price must be positive value
 
@@ -268,17 +281,21 @@ class TestOrderValidator( unittest.TestCase ):
         # list of orders
         self.mock_test_db.get_orders.return_value = []
 
+        customer_id = 1
+        order_type = ORDER_TYPE_BUY
+        quantity = 1
+        quoted_price = -72420
         result = self.validator.order_validation(
-            customer_id=1,
-            order_type=ORDER_TYPE_BUY,
-            quantity=1,
-            quoted_price=-72420,
+            customer_id,
+            order_type,
+            quantity,
+            quoted_price,
         )
 
-        self.assertEqual(result['status'], 'failed')
-        self.assertIn('price must be a positive', result['reason'])
+        self.assertEqual( result[ 'status' ], 'failed' )
+        self.assertIn( 'price must be a positive', result[ 'reason' ] )
 
-    def test_validate_customer_id_must_be_int(self):
+    def test_validate_customer_id_must_be_int( self ):
         ''' test validate function in case failed proceed
             with customer_id must be integer
 
@@ -304,10 +321,10 @@ class TestOrderValidator( unittest.TestCase ):
             quoted_price=72420,
         )
 
-        self.assertEqual(result['status'], 'failed')
-        self.assertIn('Unsupported customer id type', result['reason'])
+        self.assertEqual( result[ 'status' ], 'failed' )
+        self.assertIn( 'Unsupported customer id type', result[ 'reason' ] )
 
-    def test_validate_customer_not_found(self):
+    def test_validate_customer_not_found( self ):
         ''' test validate function in case failed proceed
             with not found customer in db
 
@@ -329,17 +346,21 @@ class TestOrderValidator( unittest.TestCase ):
         # mock no customer found
         self.mock_test_db.get_customer_info.return_value = None
 
+        customer_id = 999
+        order_type = ORDER_TYPE_BUY
+        quantity = 1
+        quoted_price = 72420
         result = self.validator.order_validation(
-            customer_id=999,
-            order_type=ORDER_TYPE_BUY,
-            quantity=1,
-            quoted_price=72420,
+            customer_id,
+            order_type,
+            quantity,
+            quoted_price,
         )
 
-        self.assertEqual(result['status'], 'failed')
-        self.assertIn('Not found customer id', result['reason'])
+        self.assertEqual( result[ 'status' ], 'failed' )
+        self.assertIn( 'Not found customer id', result[ 'reason' ] )
 
-    def test_validate_quantity_increment_of_half(self):
+    def test_validate_quantity_increment_of_half( self ):
         ''' test validate function in case failed proceed
             with increment of quantity does not be 0.5
 
@@ -358,25 +379,35 @@ class TestOrderValidator( unittest.TestCase ):
         # list of orders
         self.mock_test_db.get_orders.return_value = []
 
+        customer_id = 1
+        order_type = ORDER_TYPE_BUY
+        quantity = 1.3
+        quoted_price = 72420
         result = self.validator.order_validation(
-            customer_id=1,
-            order_type=ORDER_TYPE_BUY,
-            quantity=1.3,
-            quoted_price=72420,
+            customer_id,
+            order_type,
+            quantity,
+            quoted_price,
         )
 
-        self.assertEqual(result['status'], 'failed')
-        self.assertIn('0.5', result['reason'])
+        self.assertEqual( result[ 'status' ], 'failed' )
+        self.assertIn( '0.5', result[ 'reason' ] )
 
-    def test_validate_buy_price_with_spread_out_of_range(self):
+    def test_validate_buy_price_with_spread_out_of_range( self ):
         ''' test validate function in case failed proceed
             with outside of spread range
 
+            spread amount = 71000 * MARGIN
+            so buy range will be ( market + spread ) * ( 1 - TOLERANCE ) and ( market + spread ) * ( 1 + TOLERANCE )
+
             expected result status should be failed
         '''
+        market_price = Decimal( '71000.00' )
+        spreaded_market_price = market_price * ( 1 + MARGIN )
+
         # mock value of each function
         # market price
-        self.mock_test_db.get_market_price.return_value = Decimal( '71000.00' )
+        self.mock_test_db.get_market_price.return_value = market_price
 
         # customer balance
         self.mock_test_db.get_customer_balance.return_value = Decimal( '10000000' )
@@ -387,19 +418,95 @@ class TestOrderValidator( unittest.TestCase ):
         # list of orders
         self.mock_test_db.get_orders.return_value = []
 
-        # Expected buy price = 71000 * 1.02 = 72420
-        # 80000 is outside 2% tolerance
-        result = self.validator.order_validation(
-            customer_id=1,
-            order_type=ORDER_TYPE_BUY,
-            quantity=1,
-            quoted_price=80000,
-        )
+        # lower bound
+        with self.subTest( 'quoted price is spreaded_market_price * ( 1 - TOLERANCE_ORDER_AMOUNT ) (still pass)'):
 
-        self.assertEqual(result['status'], 'failed')
-        self.assertIn('Price freshness error', result['reason'])
+            customer_id = 1
+            order_type = ORDER_TYPE_BUY
+            quantity = 1
+            quoted_price = float( ( spreaded_market_price * ( 1 - TOLERANCE_ORDER_AMOUNT ) ).quantize( Decimal( '0.01' ) ) )
+            result = self.validator.order_validation(
+                customer_id,
+                order_type,
+                quantity,
+                quoted_price,
+            )
 
-    def test_validate_market_price_zero(self):
+            self.assertEqual( result[ 'status' ], 'passed' )
+            spread_amount = Decimal( '71000.00' ) * MARGIN
+        self.assertEqual( result[ 'spread_amount' ], spread_amount.quantize( Decimal( '0.01' ) ) )
+
+        # lower bound
+        with self.subTest( 'quoted price is spreaded_market_price * ( 1 - TOLERANCE_ORDER_AMOUNT ) - 0.01 (failed exceed)'):
+
+            customer_id = 1
+            order_type = ORDER_TYPE_BUY
+            quantity = 1
+            quoted_price = float( ( spreaded_market_price * ( 1 - TOLERANCE_ORDER_AMOUNT ) ).quantize( Decimal( '0.01' ) ) - Decimal( '0.01' ) )
+            result = self.validator.order_validation(
+                customer_id,
+                order_type,
+                quantity,
+                quoted_price,
+            )
+
+            self.assertEqual( result[ 'status' ], 'failed' )
+            self.assertIn( 'Price freshness error', result[ 'reason' ] )
+        
+        # upper bound
+        with self.subTest( 'quoted price is spreaded_market_price * ( 1 + TOLERANCE_ORDER_AMOUNT ) (still pass)'):
+
+            customer_id = 1
+            order_type = ORDER_TYPE_BUY
+            quantity = 1
+            quoted_price = float( ( spreaded_market_price * ( 1 + TOLERANCE_ORDER_AMOUNT ) ).quantize( Decimal( '0.01' ) ) )
+            result = self.validator.order_validation(
+                customer_id,
+                order_type,
+                quantity,
+                quoted_price,
+            )
+
+            self.assertEqual( result[ 'status' ], 'passed' )
+            spread_amount = Decimal( '71000.00' ) * MARGIN
+        self.assertEqual( result[ 'spread_amount' ], spread_amount.quantize( Decimal( '0.01' ) ) )
+
+        # upper bound
+        with self.subTest( 'quoted price is spreaded_market_price * ( 1 + TOLERANCE_ORDER_AMOUNT ) + 0.01 (failed exceed)'):
+
+            customer_id = 1
+            order_type = ORDER_TYPE_BUY
+            quantity = 1
+            quoted_price = float( ( spreaded_market_price * ( 1 + TOLERANCE_ORDER_AMOUNT ) ).quantize( Decimal( '0.01' ) ) + Decimal( '0.01' ) )
+            result = self.validator.order_validation(
+                customer_id,
+                order_type,
+                quantity,
+                quoted_price,
+            )
+
+            self.assertEqual( result[ 'status' ], 'failed' )
+            self.assertIn( 'Price freshness error', result[ 'reason' ] )
+
+        # in range
+        with self.subTest( 'quoted price is spreaded_market_price * ( 1 + TOLERANCE_ORDER_AMOUNT ) (still pass)'):
+
+            customer_id = 1
+            order_type = ORDER_TYPE_BUY
+            quantity = 1
+            quoted_price = float( ( spreaded_market_price * ( 1 + ( TOLERANCE_ORDER_AMOUNT / Decimal( '2' ) ) ) ).quantize( Decimal( '0.01' ) ) )
+            result = self.validator.order_validation(
+                customer_id,
+                order_type,
+                quantity,
+                quoted_price,
+            )
+
+            self.assertEqual( result[ 'status' ], 'passed' )
+            spread_amount = Decimal( '71000.00' ) * MARGIN
+        self.assertEqual( result[ 'spread_amount' ], spread_amount.quantize( Decimal( '0.01' ) ) )
+
+    def test_validate_market_price_zero( self ):
         ''' test validate function in case failed proceed
             with market price is 0
 
@@ -418,17 +525,21 @@ class TestOrderValidator( unittest.TestCase ):
         # list of orders
         self.mock_test_db.get_orders.return_value = []
 
+        customer_id = 1
+        order_type = ORDER_TYPE_BUY
+        quantity = 1
+        quoted_price = 72420
         result = self.validator.order_validation(
-            customer_id=1,
-            order_type=ORDER_TYPE_BUY,
-            quantity=1,
-            quoted_price=72420,
+            customer_id,
+            order_type,
+            quantity,
+            quoted_price,
         )
 
-        self.assertEqual(result['status'], 'failed')
-        self.assertIn('Cannot proceed with market price at 0', result['reason'])
+        self.assertEqual( result[ 'status' ], 'failed' )
+        self.assertIn( 'Cannot proceed with market price at 0', result[ 'reason' ] )
 
-    def test_validate_buy_order_insufficient_balance(self):
+    def test_validate_buy_order_insufficient_balance( self ):
         ''' test validate function in case failed proceed
             with order is more than balance
 
@@ -447,17 +558,21 @@ class TestOrderValidator( unittest.TestCase ):
         # list of orders
         self.mock_test_db.get_orders.return_value = []
 
+        customer_id = 1
+        order_type = ORDER_TYPE_BUY
+        quantity = 1
+        quoted_price = 72420
         result = self.validator.order_validation(
-            customer_id=1,
-            order_type=ORDER_TYPE_BUY,
-            quantity=1,
-            quoted_price=72420,
+            customer_id,
+            order_type,
+            quantity,
+            quoted_price,
         )
 
-        self.assertEqual(result['status'], 'failed')
-        self.assertIn('Insufficient balance', result['reason'])
+        self.assertEqual( result[ 'status' ], 'failed' )
+        self.assertIn( 'Insufficient balance', result[ 'reason' ] )
 
-    def test_validate_sell_order_insufficient_holding(self):
+    def test_validate_sell_order_insufficient_holding( self ):
         ''' test validate function in case failed proceed
             with holding quantity is less than order
 
@@ -476,21 +591,25 @@ class TestOrderValidator( unittest.TestCase ):
         # list of orders
         self.mock_test_db.get_orders.return_value = []
 
+        customer_id = 1
+        order_type = ORDER_TYPE_SELL
+        quantity = 1
+        quoted_price = 71000
         result = self.validator.order_validation(
-            customer_id=1,
-            order_type=ORDER_TYPE_SELL,
-            quantity=1,
-            quoted_price=71000,
+            customer_id,
+            order_type,
+            quantity,
+            quoted_price,
         )
 
-        self.assertEqual(result['status'], 'failed')
-        self.assertIn('Insufficient holding quantity', result['reason'])
+        self.assertEqual( result[ 'status' ], 'failed' )
+        self.assertIn( 'Insufficient holding quantity', result[ 'reason' ] )
 
-    def test_validate_trading_limit_success(self):
+    def test_validate_trading_limit_success( self ):
         ''' test validate function in case success proceed
             with does not exceed the trading limit
 
-            expected result status should be failed
+            expected result status should be passed
         '''
         # mock value of each function
         # market price
@@ -510,16 +629,22 @@ class TestOrderValidator( unittest.TestCase ):
 
         # current daily quantity = 3.5
         # remaining = 1.5
+        customer_id = 1
+        order_type = ORDER_TYPE_BUY
+        quantity = 1.5
+        quoted_price = 72420
         result = self.validator.order_validation(
-            customer_id=1,
-            order_type=ORDER_TYPE_BUY,
-            quantity=1.5,
-            quoted_price=72420,
+            customer_id,
+            order_type,
+            quantity,
+            quoted_price,
         )
 
-        self.assertEqual(result['status'], 'passed')
+        self.assertEqual( result[ 'status' ], 'passed' )
+        spread_amount = Decimal( '71000.00' ) * MARGIN
+        self.assertEqual( result[ 'spread_amount' ], spread_amount.quantize( Decimal( '0.01' ) ) )
 
-    def test_validate_trading_limit_exceeded(self):
+    def test_validate_trading_limit_exceeded( self ):
         ''' test validate function in case failed proceed
             with exceed the trading limit
 
@@ -544,15 +669,19 @@ class TestOrderValidator( unittest.TestCase ):
         # current daily quantity = 4.0
         # remaining = 1.0
         # order quantity = 1.5 -> fail
+        customer_id = 1
+        order_type = ORDER_TYPE_BUY
+        quantity = 1.5
+        quoted_price = 72420
         result = self.validator.order_validation(
-            customer_id=1,
-            order_type=ORDER_TYPE_BUY,
-            quantity=1.5,
-            quoted_price=72420,
+            customer_id,
+            order_type,
+            quantity,
+            quoted_price,
         )
 
-        self.assertEqual(result['status'], 'failed')
-        self.assertIn('Remaining allowance', result['reason'])
+        self.assertEqual( result[ 'status' ], 'failed' )
+        self.assertIn( 'Remaining allowance', result[ 'reason' ] )
 
 
 if __name__ == '__main__':
