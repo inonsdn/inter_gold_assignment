@@ -3,10 +3,15 @@ This repository contains 5 parts of assignment. For part 1, 4, and 5 is .md file
 
 For run and execute part 2 and part 3 you can to go to directory and run with step in README.md in folder.
 
-Alternative way is run in this directory by
+Alternative way is run in this directory by export PYTHONPATH first
 
 ```
 export PYTHONPATH=`pwd`/part2_and_part3:$PYTHONPATH
+```
+
+and run by 
+
+```
 python3 part2_and_part3/order_validation.py 1 buy 0.5 70000
 ```
 
