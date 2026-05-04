@@ -2,6 +2,7 @@
 #
 # Standart Import
 #
+import datetime
 from decimal import Decimal
 import unittest
 from unittest.mock import Mock
@@ -55,6 +56,7 @@ class TestOrderValidator( unittest.TestCase ):
         ''' test validate function in case success proceed buy order
 
             expected result status should be passed
+                and mock function must called or not called as expect
                 buy order spread amount must be computed with market price * margin
         '''
         # mock value of each function
@@ -89,10 +91,23 @@ class TestOrderValidator( unittest.TestCase ):
         spread_amount = Decimal( '71000.00' ) * MARGIN
         self.assertEqual( result[ 'spread_amount' ], spread_amount.quantize( Decimal( '0.01' ) ) )
 
+        self.mock_test_db.get_market_price.assert_called_once()
+        self.mock_test_db.get_customer_balance.assert_called_once_with( customer_id )
+        self.mock_test_db.get_holding_quantity.assert_not_called()
+        
+        # construct expected argument called
+        now_datetime = datetime.datetime.now()
+        next_day_datetime = now_datetime + datetime.timedelta( days = 1 )
+        expected_start_datetime = datetime.datetime( now_datetime.year, now_datetime.month, now_datetime.day, 0 )
+        expected_end_datetime = datetime.datetime( next_day_datetime.year, next_day_datetime.month, next_day_datetime.day, 0 )
+        self.mock_test_db.get_orders.assert_called_once_with( customer_id, expected_start_datetime, expected_end_datetime )
+        self.mock_test_db.get_customer_info.assert_called_once_with( customer_id )
+
     def test_validate_sell_order_success( self ):
         ''' test validate function in case success proceed sell order
 
             expected result status should be passed
+                and mock function must called or not called as expect
                 sell order spread amount must be 0.00
         '''
         # mock value of each function
@@ -127,10 +142,23 @@ class TestOrderValidator( unittest.TestCase ):
         spread_amount = Decimal( '0' )
         self.assertEqual( result[ 'spread_amount' ], spread_amount.quantize( Decimal( '0.01' ) ) )
 
+        self.mock_test_db.get_market_price.assert_called_once()
+        self.mock_test_db.get_customer_balance.assert_not_called()
+        self.mock_test_db.get_holding_quantity.assert_called_once_with( customer_id )
+
+        # construct expected argument called
+        now_datetime = datetime.datetime.now()
+        next_day_datetime = now_datetime + datetime.timedelta( days = 1 )
+        expected_start_datetime = datetime.datetime( now_datetime.year, now_datetime.month, now_datetime.day, 0 )
+        expected_end_datetime = datetime.datetime( next_day_datetime.year, next_day_datetime.month, next_day_datetime.day, 0 )
+        self.mock_test_db.get_orders.assert_called_once_with( customer_id, expected_start_datetime, expected_end_datetime )
+        self.mock_test_db.get_customer_info.assert_called_once_with( customer_id )
+
     def test_validate_invalid_order_type( self ):
         ''' test validate function in case failed proceed invalid order type
 
             expected result status should be failed
+                and mock function must called or not called as expect
         '''
         # mock value of each function
         # market price
@@ -163,11 +191,18 @@ class TestOrderValidator( unittest.TestCase ):
         self.assertEqual( result[ 'status' ], 'failed' )
         self.assertIn( 'Unsupported order type', result[ 'reason' ] )
 
+        self.mock_test_db.get_market_price.assert_not_called()
+        self.mock_test_db.get_customer_balance.assert_not_called()
+        self.mock_test_db.get_holding_quantity.assert_not_called()
+        self.mock_test_db.get_orders.assert_not_called()
+        self.mock_test_db.get_customer_info.assert_not_called()
+
     def test_validate_quantity_must_be_number( self ):
         ''' test validate function in case failed proceed
             with type assertions quantity
 
             expected result status should be failed
+                and mock function must called or not called as expect
         '''
         # mock value of each function
         # market price
@@ -196,11 +231,18 @@ class TestOrderValidator( unittest.TestCase ):
         self.assertEqual( result[ 'status' ], 'failed' )
         self.assertIn( 'quantity must be a number', result[ 'reason' ] )
 
+        self.mock_test_db.get_market_price.assert_not_called()
+        self.mock_test_db.get_customer_balance.assert_not_called()
+        self.mock_test_db.get_holding_quantity.assert_not_called()
+        self.mock_test_db.get_orders.assert_not_called()
+        self.mock_test_db.get_customer_info.assert_not_called()
+
     def test_validate_price_must_be_number( self ):
         ''' test validate function in case failed proceed
             with type assertions price
 
             expected result status should be failed
+                and mock function must called or not called as expect
         '''
         # mock value of each function
         # market price
@@ -229,11 +271,18 @@ class TestOrderValidator( unittest.TestCase ):
         self.assertEqual( result[ 'status' ], 'failed' )
         self.assertIn( 'price must be a number', result[ 'reason' ] )
 
+        self.mock_test_db.get_market_price.assert_not_called()
+        self.mock_test_db.get_customer_balance.assert_not_called()
+        self.mock_test_db.get_holding_quantity.assert_not_called()
+        self.mock_test_db.get_orders.assert_not_called()
+        self.mock_test_db.get_customer_info.assert_not_called()
+
     def test_validate_quantity_must_be_positive( self ):
         ''' test validate function in case failed proceed
             with quantity must be positive value
 
             expected result status should be failed
+                and mock function must called or not called as expect
         '''
         # mock value of each function
         # market price
@@ -262,11 +311,18 @@ class TestOrderValidator( unittest.TestCase ):
         self.assertEqual( result[ 'status' ], 'failed' )
         self.assertIn( 'quantity must be a positive', result[ 'reason' ] )
 
+        self.mock_test_db.get_market_price.assert_not_called()
+        self.mock_test_db.get_customer_balance.assert_not_called()
+        self.mock_test_db.get_holding_quantity.assert_not_called()
+        self.mock_test_db.get_orders.assert_not_called()
+        self.mock_test_db.get_customer_info.assert_not_called()
+
     def test_validate_price_must_be_positive( self ):
         ''' test validate function in case failed proceed
             with price must be positive value
 
             expected result status should be failed
+                and mock function must called or not called as expect
         '''
         # mock value of each function
         # market price
@@ -295,11 +351,18 @@ class TestOrderValidator( unittest.TestCase ):
         self.assertEqual( result[ 'status' ], 'failed' )
         self.assertIn( 'price must be a positive', result[ 'reason' ] )
 
+        self.mock_test_db.get_market_price.assert_not_called()
+        self.mock_test_db.get_customer_balance.assert_not_called()
+        self.mock_test_db.get_holding_quantity.assert_not_called()
+        self.mock_test_db.get_orders.assert_not_called()
+        self.mock_test_db.get_customer_info.assert_not_called()
+
     def test_validate_customer_id_must_be_int( self ):
         ''' test validate function in case failed proceed
             with customer_id must be integer
 
             expected result status should be failed
+                and mock function must called or not called as expect
         '''
         # mock value of each function
         # market price
@@ -314,21 +377,32 @@ class TestOrderValidator( unittest.TestCase ):
         # list of orders
         self.mock_test_db.get_orders.return_value = []
 
+        customer_id = '1'
+        order_type = ORDER_TYPE_BUY
+        quantity = 1
+        quoted_price = 72420
         result = self.validator.order_validation(
-            customer_id='1',
-            order_type=ORDER_TYPE_BUY,
-            quantity=1,
-            quoted_price=72420,
+            customer_id,
+            order_type,
+            quantity,
+            quoted_price,
         )
 
         self.assertEqual( result[ 'status' ], 'failed' )
         self.assertIn( 'Unsupported customer id type', result[ 'reason' ] )
+
+        self.mock_test_db.get_market_price.assert_not_called()
+        self.mock_test_db.get_customer_balance.assert_not_called()
+        self.mock_test_db.get_holding_quantity.assert_not_called()
+        self.mock_test_db.get_orders.assert_not_called()
+        self.mock_test_db.get_customer_info.assert_not_called()
 
     def test_validate_customer_not_found( self ):
         ''' test validate function in case failed proceed
             with not found customer in db
 
             expected result status should be failed
+                and mock function must called or not called as expect
         '''
         # mock value of each function
         # market price
@@ -360,11 +434,18 @@ class TestOrderValidator( unittest.TestCase ):
         self.assertEqual( result[ 'status' ], 'failed' )
         self.assertIn( 'Not found customer id', result[ 'reason' ] )
 
+        self.mock_test_db.get_market_price.assert_not_called()
+        self.mock_test_db.get_customer_balance.assert_not_called()
+        self.mock_test_db.get_holding_quantity.assert_not_called()
+        self.mock_test_db.get_orders.assert_not_called()
+        self.mock_test_db.get_customer_info.assert_called_once_with( customer_id )
+
     def test_validate_quantity_increment_of_half( self ):
         ''' test validate function in case failed proceed
             with increment of quantity does not be 0.5
 
             expected result status should be failed
+                and mock function must called or not called as expect
         '''
         # mock value of each function
         # market price
@@ -393,6 +474,12 @@ class TestOrderValidator( unittest.TestCase ):
         self.assertEqual( result[ 'status' ], 'failed' )
         self.assertIn( '0.5', result[ 'reason' ] )
 
+        self.mock_test_db.get_market_price.assert_not_called()
+        self.mock_test_db.get_customer_balance.assert_not_called()
+        self.mock_test_db.get_holding_quantity.assert_not_called()
+        self.mock_test_db.get_orders.assert_not_called()
+        self.mock_test_db.get_customer_info.assert_called_once_with( customer_id )
+
     def test_validate_buy_price_with_spread_out_of_range( self ):
         ''' test validate function in case failed proceed
             with outside of spread range
@@ -400,7 +487,8 @@ class TestOrderValidator( unittest.TestCase ):
             spread amount = 71000 * MARGIN
             so buy range will be ( market + spread ) * ( 1 - TOLERANCE ) and ( market + spread ) * ( 1 + TOLERANCE )
 
-            expected result status should be failed
+            expected result status should be failed and passed depends on each subtest
+                and mock function must called or not called as expect
         '''
         market_price = Decimal( '71000.00' )
         spreaded_market_price = market_price * ( 1 + MARGIN )
@@ -420,6 +508,11 @@ class TestOrderValidator( unittest.TestCase ):
 
         # lower bound
         with self.subTest( 'quoted price is spreaded_market_price * ( 1 - TOLERANCE_ORDER_AMOUNT ) (still pass)'):
+            self.mock_test_db.get_market_price.reset_mock()
+            self.mock_test_db.get_customer_balance.reset_mock()
+            self.mock_test_db.get_holding_quantity.reset_mock()
+            self.mock_test_db.get_orders.reset_mock()
+            self.mock_test_db.get_customer_info.reset_mock()
 
             customer_id = 1
             order_type = ORDER_TYPE_BUY
@@ -434,10 +527,29 @@ class TestOrderValidator( unittest.TestCase ):
 
             self.assertEqual( result[ 'status' ], 'passed' )
             spread_amount = Decimal( '71000.00' ) * MARGIN
-        self.assertEqual( result[ 'spread_amount' ], spread_amount.quantize( Decimal( '0.01' ) ) )
+            self.assertEqual( result[ 'spread_amount' ], spread_amount.quantize( Decimal( '0.01' ) ) )
+
+            # mock function called
+            self.mock_test_db.get_market_price.assert_called_once()
+            self.mock_test_db.get_customer_balance.assert_called_once_with( customer_id )
+            self.mock_test_db.get_holding_quantity.assert_not_called()
+
+            # construct expected argument called
+            now_datetime = datetime.datetime.now()
+            next_day_datetime = now_datetime + datetime.timedelta( days = 1 )
+            expected_start_datetime = datetime.datetime( now_datetime.year, now_datetime.month, now_datetime.day, 0 )
+            expected_end_datetime = datetime.datetime( next_day_datetime.year, next_day_datetime.month, next_day_datetime.day, 0 )
+            self.mock_test_db.get_orders.assert_called_once_with( customer_id, expected_start_datetime, expected_end_datetime )
+            self.mock_test_db.get_customer_info.assert_called_once_with( customer_id )
 
         # lower bound
         with self.subTest( 'quoted price is spreaded_market_price * ( 1 - TOLERANCE_ORDER_AMOUNT ) - 0.01 (failed exceed)'):
+            
+            self.mock_test_db.get_market_price.reset_mock()
+            self.mock_test_db.get_customer_balance.reset_mock()
+            self.mock_test_db.get_holding_quantity.reset_mock()
+            self.mock_test_db.get_orders.reset_mock()
+            self.mock_test_db.get_customer_info.reset_mock()
 
             customer_id = 1
             order_type = ORDER_TYPE_BUY
@@ -452,9 +564,28 @@ class TestOrderValidator( unittest.TestCase ):
 
             self.assertEqual( result[ 'status' ], 'failed' )
             self.assertIn( 'Price freshness error', result[ 'reason' ] )
+
+            # mock function called
+            self.mock_test_db.get_market_price.assert_called_once()
+            self.mock_test_db.get_customer_balance.assert_called_once_with( customer_id )
+            self.mock_test_db.get_holding_quantity.assert_not_called()
+
+            # construct expected argument called
+            now_datetime = datetime.datetime.now()
+            next_day_datetime = now_datetime + datetime.timedelta( days = 1 )
+            expected_start_datetime = datetime.datetime( now_datetime.year, now_datetime.month, now_datetime.day, 0 )
+            expected_end_datetime = datetime.datetime( next_day_datetime.year, next_day_datetime.month, next_day_datetime.day, 0 )
+            self.mock_test_db.get_orders.assert_called_once_with( customer_id, expected_start_datetime, expected_end_datetime )
+            self.mock_test_db.get_customer_info.assert_called_once_with( customer_id )
         
         # upper bound
         with self.subTest( 'quoted price is spreaded_market_price * ( 1 + TOLERANCE_ORDER_AMOUNT ) (still pass)'):
+
+            self.mock_test_db.get_market_price.reset_mock()
+            self.mock_test_db.get_customer_balance.reset_mock()
+            self.mock_test_db.get_holding_quantity.reset_mock()
+            self.mock_test_db.get_orders.reset_mock()
+            self.mock_test_db.get_customer_info.reset_mock()
 
             customer_id = 1
             order_type = ORDER_TYPE_BUY
@@ -469,10 +600,29 @@ class TestOrderValidator( unittest.TestCase ):
 
             self.assertEqual( result[ 'status' ], 'passed' )
             spread_amount = Decimal( '71000.00' ) * MARGIN
-        self.assertEqual( result[ 'spread_amount' ], spread_amount.quantize( Decimal( '0.01' ) ) )
+            self.assertEqual( result[ 'spread_amount' ], spread_amount.quantize( Decimal( '0.01' ) ) )
+
+            # mock function called
+            self.mock_test_db.get_market_price.assert_called_once()
+            self.mock_test_db.get_customer_balance.assert_called_once_with( customer_id )
+            self.mock_test_db.get_holding_quantity.assert_not_called()
+
+            # construct expected argument called
+            now_datetime = datetime.datetime.now()
+            next_day_datetime = now_datetime + datetime.timedelta( days = 1 )
+            expected_start_datetime = datetime.datetime( now_datetime.year, now_datetime.month, now_datetime.day, 0 )
+            expected_end_datetime = datetime.datetime( next_day_datetime.year, next_day_datetime.month, next_day_datetime.day, 0 )
+            self.mock_test_db.get_orders.assert_called_once_with( customer_id, expected_start_datetime, expected_end_datetime )
+            self.mock_test_db.get_customer_info.assert_called_once_with( customer_id )
 
         # upper bound
         with self.subTest( 'quoted price is spreaded_market_price * ( 1 + TOLERANCE_ORDER_AMOUNT ) + 0.01 (failed exceed)'):
+
+            self.mock_test_db.get_market_price.reset_mock()
+            self.mock_test_db.get_customer_balance.reset_mock()
+            self.mock_test_db.get_holding_quantity.reset_mock()
+            self.mock_test_db.get_orders.reset_mock()
+            self.mock_test_db.get_customer_info.reset_mock()
 
             customer_id = 1
             order_type = ORDER_TYPE_BUY
@@ -488,8 +638,27 @@ class TestOrderValidator( unittest.TestCase ):
             self.assertEqual( result[ 'status' ], 'failed' )
             self.assertIn( 'Price freshness error', result[ 'reason' ] )
 
+            # mock function called
+            self.mock_test_db.get_market_price.assert_called_once()
+            self.mock_test_db.get_customer_balance.assert_called_once_with( customer_id )
+            self.mock_test_db.get_holding_quantity.assert_not_called()
+
+            # construct expected argument called
+            now_datetime = datetime.datetime.now()
+            next_day_datetime = now_datetime + datetime.timedelta( days = 1 )
+            expected_start_datetime = datetime.datetime( now_datetime.year, now_datetime.month, now_datetime.day, 0 )
+            expected_end_datetime = datetime.datetime( next_day_datetime.year, next_day_datetime.month, next_day_datetime.day, 0 )
+            self.mock_test_db.get_orders.assert_called_once_with( customer_id, expected_start_datetime, expected_end_datetime )
+            self.mock_test_db.get_customer_info.assert_called_once_with( customer_id )
+
         # in range
         with self.subTest( 'quoted price is spreaded_market_price * ( 1 + TOLERANCE_ORDER_AMOUNT ) (still pass)'):
+
+            self.mock_test_db.get_market_price.reset_mock()
+            self.mock_test_db.get_customer_balance.reset_mock()
+            self.mock_test_db.get_holding_quantity.reset_mock()
+            self.mock_test_db.get_orders.reset_mock()
+            self.mock_test_db.get_customer_info.reset_mock()
 
             customer_id = 1
             order_type = ORDER_TYPE_BUY
@@ -504,13 +673,27 @@ class TestOrderValidator( unittest.TestCase ):
 
             self.assertEqual( result[ 'status' ], 'passed' )
             spread_amount = Decimal( '71000.00' ) * MARGIN
-        self.assertEqual( result[ 'spread_amount' ], spread_amount.quantize( Decimal( '0.01' ) ) )
+            self.assertEqual( result[ 'spread_amount' ], spread_amount.quantize( Decimal( '0.01' ) ) )
+
+            # mock function called
+            self.mock_test_db.get_market_price.assert_called_once()
+            self.mock_test_db.get_customer_balance.assert_called_once_with( customer_id )
+            self.mock_test_db.get_holding_quantity.assert_not_called()
+
+            # construct expected argument called
+            now_datetime = datetime.datetime.now()
+            next_day_datetime = now_datetime + datetime.timedelta( days = 1 )
+            expected_start_datetime = datetime.datetime( now_datetime.year, now_datetime.month, now_datetime.day, 0 )
+            expected_end_datetime = datetime.datetime( next_day_datetime.year, next_day_datetime.month, next_day_datetime.day, 0 )
+            self.mock_test_db.get_orders.assert_called_once_with( customer_id, expected_start_datetime, expected_end_datetime )
+            self.mock_test_db.get_customer_info.assert_called_once_with( customer_id )
 
     def test_validate_market_price_zero( self ):
         ''' test validate function in case failed proceed
             with market price is 0
 
             expected result status should be failed
+                and mock function must called or not called as expect
         '''
         # mock value of each function
         # market price
@@ -539,11 +722,24 @@ class TestOrderValidator( unittest.TestCase ):
         self.assertEqual( result[ 'status' ], 'failed' )
         self.assertIn( 'Cannot proceed with market price at 0', result[ 'reason' ] )
 
+        self.mock_test_db.get_market_price.assert_called_once()
+        self.mock_test_db.get_customer_balance.assert_called_once_with( customer_id )
+        self.mock_test_db.get_holding_quantity.assert_not_called()
+
+        # construct expected argument called
+        now_datetime = datetime.datetime.now()
+        next_day_datetime = now_datetime + datetime.timedelta( days = 1 )
+        expected_start_datetime = datetime.datetime( now_datetime.year, now_datetime.month, now_datetime.day, 0 )
+        expected_end_datetime = datetime.datetime( next_day_datetime.year, next_day_datetime.month, next_day_datetime.day, 0 )
+        self.mock_test_db.get_orders.assert_called_once_with( customer_id, expected_start_datetime, expected_end_datetime )
+        self.mock_test_db.get_customer_info.assert_called_once_with( customer_id )
+
     def test_validate_buy_order_insufficient_balance( self ):
         ''' test validate function in case failed proceed
             with order is more than balance
 
             expected result status should be failed
+                and mock function must called or not called as expect
         '''
         # mock value of each function
         # market price
@@ -572,11 +768,24 @@ class TestOrderValidator( unittest.TestCase ):
         self.assertEqual( result[ 'status' ], 'failed' )
         self.assertIn( 'Insufficient balance', result[ 'reason' ] )
 
+        self.mock_test_db.get_market_price.assert_called_once()
+        self.mock_test_db.get_customer_balance.assert_called_once_with( customer_id )
+        self.mock_test_db.get_holding_quantity.assert_not_called()
+
+        # construct expected argument called
+        now_datetime = datetime.datetime.now()
+        next_day_datetime = now_datetime + datetime.timedelta( days = 1 )
+        expected_start_datetime = datetime.datetime( now_datetime.year, now_datetime.month, now_datetime.day, 0 )
+        expected_end_datetime = datetime.datetime( next_day_datetime.year, next_day_datetime.month, next_day_datetime.day, 0 )
+        self.mock_test_db.get_orders.assert_called_once_with( customer_id, expected_start_datetime, expected_end_datetime )
+        self.mock_test_db.get_customer_info.assert_called_once_with( customer_id )
+
     def test_validate_sell_order_insufficient_holding( self ):
         ''' test validate function in case failed proceed
             with holding quantity is less than order
 
             expected result status should be failed
+                and mock function must called or not called as expect
         '''
         # mock value of each function
         # market price
@@ -605,11 +814,24 @@ class TestOrderValidator( unittest.TestCase ):
         self.assertEqual( result[ 'status' ], 'failed' )
         self.assertIn( 'Insufficient holding quantity', result[ 'reason' ] )
 
+        self.mock_test_db.get_market_price.assert_called_once()
+        self.mock_test_db.get_customer_balance.assert_not_called()
+        self.mock_test_db.get_holding_quantity.assert_called_once_with( customer_id )
+
+        # construct expected argument called
+        now_datetime = datetime.datetime.now()
+        next_day_datetime = now_datetime + datetime.timedelta( days = 1 )
+        expected_start_datetime = datetime.datetime( now_datetime.year, now_datetime.month, now_datetime.day, 0 )
+        expected_end_datetime = datetime.datetime( next_day_datetime.year, next_day_datetime.month, next_day_datetime.day, 0 )
+        self.mock_test_db.get_orders.assert_called_once_with( customer_id, expected_start_datetime, expected_end_datetime )
+        self.mock_test_db.get_customer_info.assert_called_once_with( customer_id )
+
     def test_validate_trading_limit_success( self ):
         ''' test validate function in case success proceed
             with does not exceed the trading limit
 
             expected result status should be passed
+                and mock function must called or not called as expect
         '''
         # mock value of each function
         # market price
@@ -644,11 +866,25 @@ class TestOrderValidator( unittest.TestCase ):
         spread_amount = Decimal( '71000.00' ) * MARGIN
         self.assertEqual( result[ 'spread_amount' ], spread_amount.quantize( Decimal( '0.01' ) ) )
 
+        # expected mock function call
+        self.mock_test_db.get_market_price.assert_called_once()
+        self.mock_test_db.get_customer_balance.assert_called_once_with( customer_id )
+        self.mock_test_db.get_holding_quantity.assert_not_called()
+
+        # construct expected argument called
+        now_datetime = datetime.datetime.now()
+        next_day_datetime = now_datetime + datetime.timedelta( days = 1 )
+        expected_start_datetime = datetime.datetime( now_datetime.year, now_datetime.month, now_datetime.day, 0 )
+        expected_end_datetime = datetime.datetime( next_day_datetime.year, next_day_datetime.month, next_day_datetime.day, 0 )
+        self.mock_test_db.get_orders.assert_called_once_with( customer_id, expected_start_datetime, expected_end_datetime )
+        self.mock_test_db.get_customer_info.assert_called_once_with( customer_id )
+
     def test_validate_trading_limit_exceeded( self ):
         ''' test validate function in case failed proceed
             with exceed the trading limit
 
             expected result status should be failed
+                and mock function must called or not called as expect
         '''
         # mock value of each function
         # market price
@@ -682,6 +918,19 @@ class TestOrderValidator( unittest.TestCase ):
 
         self.assertEqual( result[ 'status' ], 'failed' )
         self.assertIn( 'Remaining allowance', result[ 'reason' ] )
+
+        # expected mock function call
+        self.mock_test_db.get_market_price.assert_not_called()
+        self.mock_test_db.get_customer_balance.assert_not_called()
+        self.mock_test_db.get_holding_quantity.assert_not_called()
+
+        # construct expected argument called
+        now_datetime = datetime.datetime.now()
+        next_day_datetime = now_datetime + datetime.timedelta( days = 1 )
+        expected_start_datetime = datetime.datetime( now_datetime.year, now_datetime.month, now_datetime.day, 0 )
+        expected_end_datetime = datetime.datetime( next_day_datetime.year, next_day_datetime.month, next_day_datetime.day, 0 )
+        self.mock_test_db.get_orders.assert_called_once_with( customer_id, expected_start_datetime, expected_end_datetime )
+        self.mock_test_db.get_customer_info.assert_called_once_with( customer_id )
 
 
 if __name__ == '__main__':
